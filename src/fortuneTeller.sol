@@ -20,42 +20,41 @@ contract FortuneTeller {
     }
 
     /// @notice Returns a fortune message based on a date string, e.g. "1998-07-23"
-    function getFortune(string memory date) external view returns (string memory) {
+    function getFortune(string calldata date) external view returns (string memory) {
         bytes memory b = bytes(date);
-        uint8[] memory nums = new uint8[](b.length);
-        uint count = 0;
+        uint sum = 0;
+        bool hasDigit = false;
 
-        // Convert each numeric char into an integer
+        // Sum numeric characters directly (no temp array)
         for (uint i = 0; i < b.length; i++) {
-            bytes1 char = b[i];
-            if (char >= 0x30 && char <= 0x39) { // '0' to '9'
-                nums[count] = uint8(uint8(char) - 48);
-                count++;
+            bytes1 c = b[i];
+            if (c >= 0x30 && c <= 0x39) {
+                hasDigit = true;
+                sum += uint8(c) - 48; // '0' = 48
             }
         }
 
-        require(count > 0, "Invalid date string");
+        require(hasDigit, "Invalid date string");
+        require(fortunes.length > 0, "No fortunes configured");
 
-        // Step 1: sum all digits
-        uint dateSum = 0;
-        for (uint i = 0; i < count; i++) {
-            dateSum += nums[i];
-        }
-
-        // Step 2: reduce to single digit (like numerology)
-        while (dateSum > 10) {
+        // Reduce to a single digit (numerology style)
+        while (sum >= 10) {
             uint tmp = 0;
-            while (dateSum > 0) {
-                tmp += dateSum % 10;
-                dateSum /= 10;
+            uint x = sum;
+            while (x != 0) {
+                tmp += x % 10;
+                x /= 10;
             }
-            dateSum = tmp;
+            sum = tmp;
         }
 
-        
-        uint counter = dateSum == 0 ? 9 : dateSum;
+        // Map 0..9 to a safe index 0..fortunes.length-1
+        // Keep your special-case behavior: 0 -> last fortune.
+        uint idx = (sum == 0)
+            ? fortunes.length - 1
+            : (sum - 1) % fortunes.length;
 
-        return fortunes[counter - 1]; 
+        return fortunes[idx];
     }
 
     function fortuneCount() external view returns (uint256) {
